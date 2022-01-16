@@ -8,8 +8,6 @@ import { SteamOfferItemProps } from '../interfaces/steam';
 
 const steamManager = {};
 
-const steam = new SteamCommunity();
-
 const sendProcess = async (config: ConfigProps, offer, item: SteamOfferItemProps, retry: number) => {
   try {
     await send(offer);
@@ -20,7 +18,7 @@ const sendProcess = async (config: ConfigProps, offer, item: SteamOfferItemProps
       message(config, `Create offer ${item.market_name} failed in 10 times. Ignore the trade`, Status.FAILED);
     } else {
       message(config, `Create offer ${item.market_name} failed. Retry in 1 minute`, Status.FAILED);
-      // await loginSteam(config);
+      await loginSteam(config);
       await timeout(60000);
       return await sendProcess(config, offer, item, retry + 1);
     }
@@ -36,7 +34,7 @@ const confirmProcess = async (config: ConfigProps, steam, offer, item: SteamOffe
       message(config, `Confirm offer ${item.market_name} failed in 10 times. Ignore the trade`, Status.FAILED);
     } else {
       message(config, `Confirm offer ${item.market_name} failed. Retry in 1 minute`, Status.FAILED);
-      // await loginSteam(config);
+      await loginSteam(config);
       await timeout(60000);
       return await confirmProcess(config, steam, offer, item, retry + 1);
     }
@@ -45,14 +43,14 @@ const confirmProcess = async (config: ConfigProps, steam, offer, item: SteamOffe
 
 export const sendOffer = async (config: ConfigProps, item: SteamOfferItemProps, tradeurl: string) => {
   const items = [{ assetid: item.assetid, appid: item.appid, contextid: item.contextid }];
-  const manager = steamManager[config.steam.accountName];
+  const manager = steamManager[config.steam.accountName].manager;
   if (manager) {
     const offer = manager.createOffer(tradeurl);
     offer.addMyItems(items);
     const success = await sendProcess(config, offer, item, 1);
     if (success) {
       await timeout(10000);
-      await confirmProcess(config, steam, offer, item, 1);
+      await confirmProcess(config, steamManager[config.steam.accountName].steam, offer, item, 1);
     }
   }
 };
@@ -86,6 +84,7 @@ const send = (offer) => {
 
 export const loginSteam = async (config: ConfigProps) => {
   return new Promise((resolve) => {
+    const steam = new SteamCommunity();
     steam.login(
       {
         accountName: config.steam.accountName,
@@ -99,14 +98,17 @@ export const loginSteam = async (config: ConfigProps) => {
           return;
         }
 
-        steamManager[config.steam.accountName] = new TradeOfferManager({
-          domain: 'localhost',
-          language: 'en',
-          pollInterval: 120000,
-          // cancelTime: 9 * 60 * 1000, // cancel outgoing offers after 9mins
-        });
+        steamManager[config.steam.accountName] = {
+          steam: steam,
+          manager: new TradeOfferManager({
+            domain: 'localhost',
+            language: 'en',
+            pollInterval: 120000,
+            // cancelTime: 9 * 60 * 1000, // cancel outgoing offers after 9mins
+          }),
+        };
 
-        steamManager[config.steam.accountName].setCookies(cookies, (err) => {
+        steamManager[config.steam.accountName].manager.setCookies(cookies, (err) => {
           if (err) {
             resolve(null);
             message(config, 'Steam login failed', Status.FAILED);
@@ -115,7 +117,7 @@ export const loginSteam = async (config: ConfigProps) => {
           }
 
           // auto accept steam offer
-          steamManager[config.steam.accountName].on('newOffer', (offer) => {
+          steamManager[config.steam.accountName].manager.on('newOffer', (offer) => {
             if (offer.itemsToGive.length === 0) {
               offer.accept();
             }

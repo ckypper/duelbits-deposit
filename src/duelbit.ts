@@ -16,7 +16,7 @@ export const initDuelbitSocket = async (config: ConfigProps) => {
       transports: ['websocket'],
       auth: tokenResponse,
       secure: true,
-      reconnection: true,
+      reconnection: false,
       extraHeaders: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36',
@@ -31,10 +31,6 @@ export const initDuelbitSocket = async (config: ConfigProps) => {
       });
     });
 
-    socket.on('null', (data) => {
-      console.log(data);
-    });
-
     socket.on('pay:p2p:ping', (msg: PingEventMessageProps) => {
       const { id, items, buyer } = msg;
       message(config, `${buyer.name} want to buy your ${items[0].name} for ${items[0].price} coins`, Status.SUCCESS);
@@ -46,6 +42,10 @@ export const initDuelbitSocket = async (config: ConfigProps) => {
     socket.on('pay:p2p:expired', (msg: PingEventMessageProps) => {
       const { items, buyer } = msg;
       message(config, `${buyer.name} not accept ${items[0].name}`, Status.FAILED);
+    });
+
+    socket.on('disconnect', () => {
+      initDuelbitSocket(config);
     });
 
     socket.on('pay:p2p:complete', (msg: PingEventMessageProps) => {
@@ -73,7 +73,7 @@ export const initDuelbitSocket = async (config: ConfigProps) => {
     });
 
     socket.on('connect_error', (err) => {
-      console.log(`Connect to duelbits failed due to ${err.message}`);
+      message(config, `Connect to duelbits failed due to ${err.message}`, Status.FAILED);
     });
 
     setInterval(() => {
