@@ -5,8 +5,8 @@ export const USER_CONFIG: ConfigProps[] = [
   {
     name: 'John', // To display in message
     empire: {
-      active: true, // if true, empire deposit will active
-      apikey: 'abcxyz', // CSGOEmpire APIKey, you can find in https://csgoempire.com/trading/apikey,
+      active: true, // if true, duelbit deposit will active
+      userToken: '',
     },
     steam: {
       accountName: 'abcxyz', // steam account
