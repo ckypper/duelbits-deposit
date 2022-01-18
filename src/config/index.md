@@ -4,7 +4,7 @@ import { ConfigProps } from '../interfaces/index';
 export const USER_CONFIG: ConfigProps[] = [
   {
     name: 'John', // To display in message
-    empire: {
+    duelbit: {
       active: true, // if true, duelbit deposit will active
       userToken: '',
     },
